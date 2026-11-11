@@ -22,7 +22,7 @@
     "yaml-reader.cjs",
     "CHANGELOG.md",
     "DEVELOPMENT.md",
-    "docs/preview.png",
+    "docs/tidal-library-star-map.png",
     "LICENSE"
   ],
   "engines": {
