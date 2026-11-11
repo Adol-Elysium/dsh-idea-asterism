@@ -1,0 +1,19 @@
+# Local DSH profiles, host fixtures, caches and developer-only upgrade tools
+/tools/.*/
+/tools/desktop-repair-*.py
+/tools-upgrade-ui.py
+node_modules/
+.npm-cache/
+.pnpm-store/
+__pycache__/
+.env
+.env.*
+*.log
+
+# Installers, transfer bundles and local preview captures
+*.tgz
+*.zip
+/preview*.png
+
+# Compatibility snapshots describe the maintainer environment
+/tools/.host-baseline.json
