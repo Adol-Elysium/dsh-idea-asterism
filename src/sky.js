@@ -17,7 +17,7 @@ function labelContains(box,p){
  return Math.abs(dx*c+dy*s)<=halfW&&Math.abs(dy*c-dx*s)<=halfH;
 }
 function drawTextIdea(ctx,p,selected,a,width,editingId){
- const n=p.node,size=n.fontSize||a.fontSize;
+ const n=p.node,size=C.ideaFontSize(n,a);
  const fonts={sans:'"Microsoft YaHei UI",sans-serif',serif:'SimSun,serif',kai:'KaiTi,STKaiti,serif',mono:'Consolas,"Microsoft YaHei UI",monospace'};
  ctx.save();ctx.font=size+'px '+(fonts[n.fontFamily]||fonts.sans);
  const maxWidth=Math.min(360,Math.max(24,width-12)),lines=[];
@@ -68,7 +68,7 @@ function drawLabels(ctx,points,selected,a,width,height,editingId){
   const n=p.node,active=selected.includes(n.id);
   if(n.display==='text')continue;
   if(!active&&a.labels!=='all'&&!(a.labels==='near'&&p.scale>.85))continue;
-  const size=n.fontSize||Math.max(10,a.fontSize+(C.bodyOf(n)==='planet'?C.seed(n.id)%5-2:0));
+  const size=C.ideaFontSize(n,a);
   ctx.font=size+'px "Microsoft YaHei UI",sans-serif';ctx.textBaseline='middle';
   const text=(n.favorite?'☆ ':'')+(n.title.length>23?n.title.slice(0,22)+'…':n.title||'未命名想法');
   const w=ctx.measureText(text).width+6,h=size+5;

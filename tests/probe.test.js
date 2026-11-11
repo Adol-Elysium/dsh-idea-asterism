@@ -1,7 +1,7 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {discover,extractPersona,parseIdeas} from '../index.js';
-import {review} from '../ai.js';
+import {review,generate} from '../ai.js';
 test('review sends only the requested persona prompt to the configured model',async()=>{
  const prompts={first:'test-only prompt A',second:'test-only prompt B'};
  const calls=[];
@@ -37,4 +37,24 @@ test('an unreadable persona document does not hide healthy presets',async()=>{
   readDocument:async id=>{if(id==='bad')throw Error('unavailable');return {content:'- name: "@deepseek-ai/dsh-persona"\n  config:\n    prefix: 独立读者'};}
  }:undefined};
  assert.deepEqual((await discover(ctx)).map(p=>p.id),['reader']);
+});
+
+test('association count accepts one or twenty, caps output and rejects invalid ranges',async()=>{
+ let requested=0;
+ const ctx={get:name=>({
+  agentDefaultModel:{currentSelection:()=>({provider:'fixture',model:'fixture'})},
+  llm:{async *stream(input){
+   requested++;assert.ok(input.system.includes('条'));
+   yield {type:'text-delta',text:JSON.stringify(Array.from({length:23},(_,i)=>({title:'想法'+i,text:'设想'+i})))};
+   yield {type:'finish'};
+  }}
+ })[name]};
+ for(const count of [1,20]){
+  const r=await generate(ctx,{text:'测试',themes:['测试'],associationMin:count,associationMax:count});
+  assert.equal(r.ideas.length,count);
+ }
+ for(const [min,max] of [[0,1],[1,21],[7,3],[1.5,4]]){
+  await assert.rejects(generate(ctx,{text:'测试',themes:['测试'],associationMin:min,associationMax:max}),/联想数量/);
+ }
+ assert.equal(requested,2);
 });

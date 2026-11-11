@@ -60,12 +60,38 @@ test('undo edits leaves independently arrived comets and later feedback stars on
 
 test('association fading, review timer and explicit confirmation survive a save',()=>{
  const n={generated:true,viewedAt:10000},a={fadeDelay:5,fadeOpacity:.45};
- assert.equal(C.ideaOpacity(n,a,false,14000,0),1);
- assert.ok(Math.abs(C.ideaOpacity(n,a,false,17000,0)-.45)<1e-8);
- for(const p of [{favorite:true},{confirmed:true},{viewedAt:16900}])assert.equal(C.ideaOpacity({...n,...p},a,false,17000,0),1);
- assert.equal(C.ideaOpacity({},a,false,17000,0),1);
- assert.equal(C.ideaOpacity(n,a,true,17000,0),1);
+ assert.equal(C.ideaOpacity(n,a,14000,0),1);
+ assert.ok(Math.abs(C.ideaOpacity(n,a,17000,0)-.45)<1e-8);
+ for(const p of [{favorite:true},{confirmed:true},{viewedAt:16900}])assert.equal(C.ideaOpacity({...n,...p},a,17000,0),1);
+ assert.equal(C.ideaOpacity({},a,17000,0),1);
+ assert.equal(C.ideaOpacity({generated:true,createdAt:1000},{},91000,0),1);
+ assert.equal(C.ideaOpacity({generated:true,createdAt:1000},{},93000,0),.6);
  const s=C.session();Object.assign(s.nodes[0],n,{body:'star',finish:'giant',fx:false,fxSpeed:.6});
  const saved=C.valid(C.clone({schema:2,current:s.id,sessions:[s]}));
  assert.equal(C.finishOf(saved.sessions[0].nodes[0]),'giant');
+});
+
+test('fixed orbit centers keep their XYZ midpoint and radius through reload',()=>{
+ const state={schema:2,sessions:[C.session()],current:null},s=state.sessions[0],n=s.nodes[0];
+ state.current=s.id;n.body='planet';n.p=[30,75,130];
+ const center=[-12,5,80],radius=Math.hypot(...n.p.map((v,i)=>v-center[i]));
+ n.motion={center,orbit:'circle',period:20,tilt:35};
+ assert.deepEqual(C.valid(C.clone(state)).sessions[0].nodes[0].motion.center,center);
+ const frame=C.orbitalFrame(n,null,0);
+ for(const t of [0,2,5,16]){
+  const a=C.worldPoint(n,frame,t),b=C.worldPoint(n,frame,t+10);
+  a.forEach((v,i)=>assert.ok(Math.abs((v+b[i])/2-center[i])<1e-8));
+  assert.ok(Math.abs(Math.hypot(...a.map((v,i)=>v-center[i]))-radius)<1e-8);
+ }
+ n.motion.center=[1,2];assert.throws(()=>C.valid(state),/公转中心/);
+});
+
+test('sentence association labels are smaller, readable, and respect manual sizes',()=>{
+ const a={fontSize:24},keyword={id:'example',body:'planet',generated:true,title:'声音地图'};
+ const base=C.ideaFontSize(keyword,a);
+ assert.equal(C.ideaFontSize({...keyword,associationFormat:'sentences'},a),Math.max(12,Math.round(base*.85)));
+ assert.ok(C.ideaFontSize({...keyword,title:'把夜晚的城市声音收集成可借阅的书籍'},a)<base);
+ assert.equal(C.ideaFontSize({...keyword,fontSize:27,associationFormat:'sentences'},a),27);
+ assert.ok(C.ideaFontSize({...keyword,associationFormat:'sentences'},{fontSize:14})>=12);
+ assert.equal(C.ideaFontSize({...keyword,display:'text',associationFormat:'sentences'},a),20);
 });

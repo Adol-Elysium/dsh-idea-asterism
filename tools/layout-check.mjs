@@ -47,7 +47,7 @@ export async function checkLayout(page){
   }
   await page.getByText('管理与导出',{exact:true}).click();
   await page.getByLabel('输入想法').click({trial:true});
-  for(const name of ['想法','人格反馈','外观','发散']){
+  for(const name of ['想法','反馈','属性','发散']){
    await page.getByRole('button',{name,exact:true}).click();
    if(await page.locator('.ss-inspector').evaluate(el=>el.scrollWidth>el.clientWidth+2))issues.push(context+' '+name+'面板横向溢出');
   }

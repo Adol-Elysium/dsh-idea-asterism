@@ -10,7 +10,7 @@ npm test
 npm pack --offline --ignore-scripts
 ```
 
-1.0.0 的安装包为 `dsh-idea-asterism-1.0.0.tgz`。内置的第三方组件与许可证在 `assets/`。星体纹理随包提供；重新生成时运行 `tools/render-bodies.py`，需要 NumPy、SciPy 和 Pillow。
+1.0.3 的安装包为 `dsh-idea-asterism-1.0.3.tgz`。内置的第三方组件与许可证在 `assets/`。星体纹理随包提供；重新生成时运行 `tools/render-bodies.py`，需要 NumPy、SciPy 和 Pillow。
 
 ## 对接 DSH
 

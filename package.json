@@ -1,6 +1,6 @@
 {
   "name": "dsh-idea-asterism",
-  "version": "1.0.0",
+  "version": "1.0.3",
   "private": true,
   "type": "module",
   "description": "思维星图（Idea Asterism）是一款用于 DeepSeek Harness 的三维思维风暴插件。",
@@ -22,7 +22,7 @@
     "yaml-reader.cjs",
     "CHANGELOG.md",
     "DEVELOPMENT.md",
-    "docs/tidal-library-star-map.png",
+    "docs/idea-asterism-1.0.3.png",
     "LICENSE"
   ],
   "engines": {

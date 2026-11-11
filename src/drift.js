@@ -11,7 +11,7 @@ function NumericField({label,value,min,max,step=1,change}){
  return field(label,h('input',{type:'number',min,max,step,value:draft,onChange:e=>setDraft(e.target.value),
   onBlur:apply,onKeyDown:e=>{if(e.key==='Enter')e.currentTarget.blur();}}));
 }
-function MotionPanel({node,change}){
+function MotionPanel({node,change,changeCenter,getCenter}){
  const m=C.motionOf(node);
  const edit=(key,value)=>change({...node.motion,[key]:value});
  const numeric=(label,key,min,max,step=1)=>h(NumericField,{label,value:m[key],min,max,step,change:v=>edit(key,v)});
@@ -21,7 +21,14 @@ function MotionPanel({node,change}){
   field('公转轨道',options(m.orbit,[['none','无公转'],['circle','圆形'],['ellipse','椭圆']],v=>edit('orbit',v))),
   m.orbit!=='none'&&h(R.Fragment,null,numeric('公转周期（秒）','period',2,1200),toggle('反向公转','reverse'),
    numeric('轨道半径倍率','radius',.1,4,.01),numeric('轨道倾角（度）','tilt',-90,90),
-   m.orbit==='ellipse'&&numeric('短轴 / 长轴','ratio',.05,1,.01),toggle('显示轨道线','trail')),
+   m.orbit==='ellipse'&&numeric('短轴 / 长轴','ratio',.05,1,.01),toggle('显示轨道线','trail'),
+   field('公转中心',options(m.center?'fixed':m.centerNodeId?'idea':'auto',[...(m.centerNodeId?[['idea','跟随来源想法']]:[]),['auto','自动'],['fixed','自定义坐标']],mode=>{
+    if(mode==='fixed')changeCenter(node.id,getCenter());
+    else {const next={...node.motion};delete next.center;if(mode==='auto')delete next.centerNodeId;change(next);}
+   })),
+   m.center&&h(R.Fragment,null,...['X','Y','Z'].map((axis,i)=>h(NumericField,{key:axis,label:'中心 '+axis,value:m.center[i],min:-100000,max:100000,step:.1,
+    change:value=>changeCenter(node.id,m.center.map((v,k)=>k===i?value:v))})),
+    h('small',null,'拖动图中的金色十字移动整条轨道，按住 Alt 拖动调整 Z。'))),
   btn('恢复此类星体的运动',()=>change(undefined)));
 }
 function localDriftIdea(s){
@@ -125,6 +132,6 @@ function FadeOptions({appearance:a,change}){
  return h('details',null,h('summary',null,'联想淡化'),
   field('淡化未确认联想',h('input',{type:'checkbox',checked:a.fadeIdeas!==false,onChange:e=>change('fadeIdeas',e.target.checked)})),
   h(NumericField,{label:'未点击时长（秒）',min:5,max:86400,value:a.fadeDelay??90,change:v=>change('fadeDelay',v)}),
-  h(NumericField,{label:'淡化后不透明度（%）',min:40,max:50,value:Math.round((a.fadeOpacity??.45)*100),change:v=>change('fadeOpacity',v/100)}),
+  h(NumericField,{label:'淡化后透明度（%）',min:40,max:60,value:Math.round((1-(a.fadeOpacity??.6))*100),change:v=>change('fadeOpacity',(100-v)/100)}),
   h('small',null,'点击联想可重新计时，已确认或收藏的想法会保持清晰。'));
 }

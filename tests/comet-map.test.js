@@ -75,3 +75,24 @@ test('comet slows near a stationary pointer, stays clickable, resumes and turns 
   }
  }
 });
+
+test('associations follow the moving source rather than the theme',()=>{
+ const session=C.session(),root=session.nodes[0];root.body='star';root.p=[0,0,0];
+ const source={id:'source',title:'source',text:'',kind:'idea',body:'star',p:[180,0,0],motion:{orbit:'circle',centerNodeId:root.id,period:35}};
+ const child={id:'child',title:'child',text:'',kind:'idea',body:'planet',p:[260,0,0],motion:{orbit:'circle',centerNodeId:source.id,period:12}};
+ session.nodes.push(source,child);
+ const effects=[],painted=new Map();let now=1000,request;
+ const canvas={getContext:()=>new Proxy({},{get:()=>()=>{}}),getBoundingClientRect:()=>({width:900,height:640,left:0,top:0}),addEventListener(){}};
+ const globals={C,R:{useRef:current=>({current}),useEffect:fn=>effects.push(fn)},h:(_,props)=>{props.ref.current=canvas;},
+ performance:{now:()=>now},devicePixelRatio:1,ResizeObserver:class{observe(){}},requestAnimationFrame:fn=>{request=fn;},
+ circle(){},drawBody:(_,p)=>painted.set(p.node.id,p),drawLabels:()=>[],props:{session,selected:[],canvasRef:{}}};
+ runInNewContext(readFileSync(new URL('../src/map.js',import.meta.url),'utf8')+'\nStarMap(props)',globals);
+ effects.forEach(fn=>fn());
+ for(let i=0;i<120;i++){
+  now+=40;request(now);
+  const actual=painted.get(child.id),parent=painted.get(source.id);
+  const frame={center:source.p,shift:parent.world.map((v,j)=>v-source.p[j]),centered:true};
+  const expected=C.worldPoint(child,frame,actual.orbitTime);
+  actual.world.forEach((v,j)=>assert.ok(Math.abs(v-expected[j])<1e-8));
+ }
+});

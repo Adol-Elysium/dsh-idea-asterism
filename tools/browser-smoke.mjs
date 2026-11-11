@@ -65,7 +65,7 @@ try{
  await page.locator('input[type=file][multiple]').setInputFiles({name:'草稿.txt',mimeType:'text/plain',buffer:Buffer.from('城区的环境声')});
  await page.locator('.ss-materials summary').filter({hasText:'草稿.txt'}).waitFor();
  await page.getByText('2 个想法 · 1 条连接').waitFor();
- await page.getByLabel('联网联想').check();await page.getByLabel('联网查询词').fill('城市记忆');await page.getByText('生成至少5条',{exact:true}).click();
+ await page.getByLabel('联网联想').check();await page.getByLabel('联网查询词').fill('城市记忆');await page.locator('footer').getByRole('button',{name:'进行联想',exact:true}).click();
  await page.getByText('9 个想法 · 8 条连接').waitFor();
  await page.waitForFunction(()=>window.mapText?.some(t=>t.text==='潮汐书架'));
  const placed=await page.evaluate(()=>window.mapText);
@@ -99,12 +99,12 @@ try{
  await page.getByRole('button',{name:'撤销',exact:true}).click();
  await canvas.click({position:await labelPosition('潮汐书架')});
  await page.waitForFunction(()=>document.querySelector('[aria-label="想法标题"]')?.value==='潮汐书架');
- assert.equal(await page.getByLabel('想法标题').inputValue(),'潮汐书架');await page.getByLabel('想法标题').waitFor();await page.getByRole('button',{name:'人格反馈',exact:true}).click();await page.getByText('可做一周声音采集实验。',{exact:false}).first().waitFor();
+ assert.equal(await page.getByLabel('想法标题').inputValue(),'潮汐书架');await page.getByLabel('想法标题').waitFor();await page.getByRole('button',{name:'反馈',exact:true}).click();await page.getByText('可做一周声音采集实验。',{exact:false}).first().waitFor();
  // Start a slow repeat review, then immediately ask about a different star.
  const slowStarted=new Promise(r=>signalStarted=r);delayReview=true;
  await page.getByText('全部换一轮',{exact:true}).click();await slowStarted;
  await page.getByRole('button',{name:'想法',exact:true}).click();
- await page.locator('aside select').first().selectOption({label:'夜航书签'});await page.getByRole('button',{name:'人格反馈',exact:true}).click();
+ await page.locator('aside select').first().selectOption({label:'夜航书签'});await page.getByRole('button',{name:'反馈',exact:true}).click();
  await page.getByText('可做一周声音采集实验。',{exact:false}).first().waitFor();
  assert.equal(observedAbort,true);
  await page.getByRole('separator',{name:'调整左侧框体'}).press('ArrowRight');
@@ -175,7 +175,7 @@ try{
  for(const finish of ['ocean','desert'])await dest.getByLabel('星体外观').selectOption(finish);
  await dest.getByLabel('星体样式').selectOption('comet');
  await dest.getByLabel('星体大小').press('End');
- await dest.getByRole('button',{name:'外观',exact:true}).click();
+ await dest.getByRole('button',{name:'属性',exact:true}).click();
  for(const mode of ['bright','dim','pulse'])await dest.getByLabel('背景星光').selectOption(mode);
  await dest.getByText('已保存',{exact:true}).waitFor();
  const edited=JSON.parse(await readFile(path.join(home,'star-sea','galaxies.json'),'utf8')).state.sessions[0];
@@ -186,7 +186,7 @@ try{
  await dest.getByText('9 个想法 · 8 条连接').waitFor();
  await dest.getByRole('button',{name:'撤销',exact:true}).click();await dest.getByText('10 个想法 · 9 条连接').waitFor();
  // Deletion removes that star's reviews; undo restores them without another model call.
- await dest.getByRole('button',{name:'人格反馈',exact:true}).click();
+ await dest.getByRole('button',{name:'反馈',exact:true}).click();
  await dest.getByLabel('点击星点自动点评').uncheck();
  await dest.getByRole('button',{name:'想法',exact:true}).click();
  await dest.getByLabel('选择想法',{exact:true}).selectOption({label:'夜航书签'});
@@ -251,14 +251,14 @@ try{
  boundary.nodes=[{...boundary.nodes[0],p:[100000,0,0]}];boundary.edges=[];boundary.reviews=[];boundary.assets=[];boundary.online=false;
  await dest.locator('input[accept=".json,.zip"]').setInputFiles({name:'boundary.json',mimeType:'application/json',buffer:Buffer.from(JSON.stringify({schema:2,current:boundary.id,sessions:[boundary]}))});
  await dest.getByText('坐标边界',{exact:true}).waitFor();
- await dest.getByLabel('输入想法').fill('边界处的草稿');await dest.getByText('生成至少5条',{exact:true}).click();
+ await dest.getByLabel('输入想法').fill('边界处的草稿');await dest.locator('footer').getByRole('button',{name:'进行联想',exact:true}).click();
  await dest.getByText('想法内容或位置无效',{exact:true}).waitFor();
  assert.equal(await dest.getByLabel('输入想法').inputValue(),'边界处的草稿');
  await dest.locator('input[type=file][multiple]').setInputFiles([
   {name:'一.txt',mimeType:'text/plain',buffer:Buffer.from('a'.repeat(25000))},
   {name:'二.txt',mimeType:'text/plain',buffer:Buffer.from('b'.repeat(25000))}
  ]);
- await dest.locator('.ss-materials summary').filter({hasText:'二.txt'}).waitFor();await dest.getByText('生成至少5条',{exact:true}).click();
+ await dest.locator('.ss-materials summary').filter({hasText:'二.txt'}).waitFor();await dest.locator('footer').getByRole('button',{name:'进行联想',exact:true}).click();
  await dest.getByText('组合素材超过40000字，请拆分或移除部分素材后重试').waitFor();
  assert.equal(await dest.getByLabel('输入想法').inputValue(),'边界处的草稿');
  await dest.getByText('3 个想法 · 2 条连接').waitFor();
@@ -285,4 +285,63 @@ try{
  await dest.waitForTimeout(6100);await dest.reload();
  await dest.getByText('2 个想法 · 0 条连接').waitFor();
  assert.deepEqual(pageErrors,[]);console.log('PASS: motion editing, active dwell, generated comet expiry and permanent retention across reload.');
+ // Saving a draft clears the composer but leaves the new node ready for associations.
+ await dest.getByRole('button',{name:'+ 新建',exact:true}).click();
+ const generateDraft=dest.locator('footer').getByRole('button',{name:'进行联想',exact:true});
+ assert.equal(await generateDraft.isDisabled(),true);
+ await dest.getByLabel('输入想法').fill('独立分支');
+ await dest.getByRole('button',{name:'独立新想法',exact:true}).click();
+ await dest.locator('footer').getByRole('button',{name:'进行联想',exact:true}).click();
+ await dest.getByText('8 个想法 · 6 条连接',{exact:true}).waitFor();
+ // Click a different star while another node is selected and there is an unsent draft.
+ await dest.getByRole('button',{name:'+ 新建',exact:true}).click();
+ await dest.getByLabel('输入想法').fill('之前选中的想法');
+ await dest.getByRole('button',{name:'独立新想法',exact:true}).click();
+ await dest.getByLabel('输入想法').fill('保留在输入区的草稿');
+ const auto=dest.getByLabel('点击星点即联想');
+ assert.equal(await auto.isChecked(),false);await auto.check();
+ const map=dest.locator('.ss-space canvas'),rect=await map.boundingBox();
+ await map.click({position:{x:rect.width/2,y:rect.height/2}});
+ await dest.getByText('8 个想法 · 6 条连接',{exact:true}).waitFor();
+ assert.equal(await dest.getByLabel('输入想法').inputValue(),'保留在输入区的草稿');
+ await dest.getByText('已保存',{exact:true}).waitFor();
+ const afterClick=JSON.parse(await readFile(path.join(home,'star-sea','galaxies.json'),'utf8')).state;
+ const clicked=afterClick.sessions.find(s=>s.id===afterClick.current);
+ assert.ok(clicked.edges.every(e=>e.from===clicked.nodes.find(n=>n.kind==='theme').id));
+ assert.equal(clicked.clickAssociations,true);
+ const theme=clicked.nodes.find(n=>n.kind==='theme');
+ const manual=clicked.nodes.find(n=>n.title==='之前选中的想法');
+ assert.equal(manual.motion.orbit,'circle');
+ assert.equal(manual.motion.centerNodeId,theme.id);
+ for(const n of clicked.nodes.filter(n=>n.generated))assert.equal(n.motion.centerNodeId,theme.id);
+ assert.deepEqual(pageErrors,[]);
+ console.log('PASS: associations from a saved idea and a single map click on a different idea.');
+ await auto.uncheck();
+ await dest.getByText('星体运动',{exact:true}).click();
+ await dest.getByLabel('公转轨道').selectOption('circle');
+ await dest.getByLabel('公转中心').selectOption('fixed');
+ for(const axis of ['X','Y','Z']){
+  const input=dest.getByLabel('中心 '+axis,{exact:true});await input.fill('0');await input.press('Enter');
+ }
+ const box=await map.boundingBox(),cx=box.x+box.width/2,cy=box.y+box.height/2;
+ await dest.mouse.move(cx,cy);await dest.mouse.down();await dest.mouse.move(cx+44,cy+18,{steps:8});await dest.mouse.up();
+ await dest.waitForFunction(()=>Number(document.querySelector('input[aria-label="中心 X"]')?.value||[...document.querySelectorAll('label')].find(l=>l.innerText.trim()==='中心 X')?.querySelector('input')?.value)>20);
+ await dest.getByText('已保存',{exact:true}).waitFor();await dest.reload();
+ await dest.getByLabel('选择想法').selectOption(clicked.nodes.find(n=>n.kind==='theme').id);
+ await dest.getByText('星体运动',{exact:true}).click();
+ assert.ok(Number(await dest.getByLabel('中心 X',{exact:true}).inputValue())>20);
+ await dest.getByLabel('公转中心').selectOption('auto');
+ assert.equal(await dest.getByLabel('中心 X',{exact:true}).count(),0);
+ assert.deepEqual(pageErrors,[]);
+ console.log('PASS: orbit center XYZ, map drag, reload and automatic center.');
+ await dest.getByRole('button',{name:'+ 新建',exact:true}).click();
+ await dest.getByLabel('最少条数',{exact:true}).fill('1');await dest.getByLabel('最少条数',{exact:true}).press('Enter');
+ await dest.getByLabel('最多条数',{exact:true}).fill('1');await dest.getByLabel('最多条数',{exact:true}).press('Enter');
+ await dest.getByLabel('输入想法').fill('只要一条的想法');
+ await dest.locator('footer').getByRole('button',{name:'进行联想',exact:true}).click();
+ await dest.getByText('3 个想法 · 2 条连接',{exact:true}).waitFor();
+ await dest.getByText('已保存',{exact:true}).waitFor();await dest.reload();
+ assert.equal(await dest.getByLabel('最少条数',{exact:true}).inputValue(),'1');
+ assert.equal(await dest.getByLabel('最多条数',{exact:true}).inputValue(),'1');
+ console.log('PASS: editable association counts persist and generate one idea.');
 }finally{await browser.close();serve.close();}

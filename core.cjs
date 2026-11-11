@@ -17,13 +17,39 @@ const finishes={
 };
 function finishOf(n){return Object.hasOwn(finishes[bodyOf(n)],n.finish)?n.finish:'classic';}
 function generatedIdea(n){return n.generated===true||n.arrivedAt!=null||!!(n.direction||Array.isArray(n.sourceIds));}
-function ideaOpacity(n,a,selected,now,opened){
- if(selected||n.confirmed||n.favorite||a.fadeIdeas===false||!generatedIdea(n))return 1;
+function backgroundStars(count,distribution='plane'){
+ if(distribution==='none'||count===0)return [];
+ if(distribution==='volume'){
+  return Array.from({length:count*4},(_,i)=>{
+   const random=suffix=>seed('background-'+i+suffix)/4294967296;
+   const radius=Math.cbrt(random('radius')),vertical=2*random('height')-1,angle=random('angle')*2*Math.PI;
+   const horizontal=Math.sqrt(1-vertical*vertical);
+   return [1000*radius*horizontal*Math.cos(angle),750*radius*vertical,850*radius*horizontal*Math.sin(angle)];
+  });
+ }
+ const points=Array.from({length:count},(_,i)=>[Math.sin(i*67.3)*1000,Math.sin(i*8.7)*450*.27,Math.sin(i*8.7)*450]);
+ for(let i=1;i<=count*3;i++){
+  const radius=20+Math.sqrt(i/(count*3))*780,angle=radius*.0065+i%3*2.0944+Math.sin(i*68.7)*.33;
+  const x=Math.cos(angle)*radius,z=Math.sin(angle)*radius;
+  points.push([x,z*.27,z]);
+ }
+ return points;
+}
+function ideaFontSize(n,a){
+ if(n.fontSize)return n.fontSize;
+ const base=n.display==='text'?a.fontSize:Math.max(10,a.fontSize+(bodyOf(n)==='planet'?seed(n.id)%5-2:0));
+ const title=n.title||'';
+ const sentence=n.associationFormat==='sentences'||(n.associationFormat!=='keywords'&&
+  (Array.from(title).length>=14||title.trim().split(/\s+/).length>=5||/[。！？!?；;]/.test(title)));
+ return generatedIdea(n)&&sentence?Math.min(base,Math.max(12,Math.round(base*.85))):base;
+}
+function ideaOpacity(n,a,now,opened){
+ if(n.confirmed||n.favorite||a.fadeIdeas===false||!generatedIdea(n))return 1;
  const created=typeof n.createdAt==='string'?Date.parse(n.createdAt):n.createdAt;
  const last=n.viewedAt??n.arrivedAt??(Number.isFinite(created)?created:opened);
  const elapsed=now-last-(a.fadeDelay??90)*1000;
  const progress=Math.max(0,Math.min(1,elapsed/1200));
- return 1-progress*(1-(a.fadeOpacity??.45));
+ return 1-progress*(1-(a.fadeOpacity??.6));
 }
 const driftDefaults=()=>({enabled:false,interval:180,lifetime:120});
 const textFonts={sans:'微软雅黑',serif:'宋体',kai:'楷体',mono:'等宽'};
@@ -47,17 +73,24 @@ function orbitPoint(point,center,m,seconds,inverse=false,centered=false){
  const v=dy*c+dz*s,normal=-dy*s+dz*c;
  const phase=2*Math.PI*seconds/m.period*(m.reverse?-1:1);
  const a=Math.cos(phase)*m.radius,b=Math.sin(phase)*m.radius*(m.orbit==='ellipse'?m.ratio:1);
+ if(centered&&(m.center||m.centerNodeId)){
+  // The second axis is tangent to the tilt plane and perpendicular to the radius.
+  const planar=Math.hypot(dx,v),length=Math.hypot(dx,dy,dz);
+  const tangentX=planar>1e-9?-v/planar:1,tangentV=planar>1e-9?dx/planar:0;
+  return [center[0]+a*dx+b*length*tangentX,center[1]+a*dy+b*length*tangentV*c,center[2]+a*dz+b*length*tangentV*s];
+ }
  const d=inverse?a*a+b*b:1;
  const x=(a*dx+(inverse?b:-b)*v)/d,y=(a*v+(inverse?-b:b)*dx)/d;
  const depth=centered?normal*a:normal;
  return [center[0]+x,center[1]+y*c-depth*s,center[2]+y*s+depth*c];
 }
 function orbitalFrame(node,theme,seconds){
+ if(node.motion?.center)return {center:node.motion.center,shift:[0,0,0],centered:true};
  if(!theme||node.id===theme.id){
   return {center:[node.p[0]-120,node.p[1],node.p[2]],shift:[0,0,0],local:true};
  }
  const center=theme.p;
- const themeWorld=orbitPoint(center,[center[0]-120,center[1],center[2]],motionOf(theme),seconds);
+ const themeWorld=worldPoint(theme,orbitalFrame(theme,null,seconds),seconds);
  return {center,shift:themeWorld.map((v,i)=>v-center[i]),local:false};
 }
 function worldPoint(node,frame,seconds,m=motionOf(node)){
@@ -136,7 +169,7 @@ function expireComets(session,now){
   reviews:session.reviews.filter(r=>!ids.has(r.nodeId))};
 }
 
-const appearance=()=>({starLight:'dim',brightness:.45,glow:9,color:'#b8d1df',background:'#05090e',stars:120,fontSize:14,labels:'all',orthographic:false,autoRotate:false,rotationSpeed:.002});
+const appearance=()=>({starDistribution:'plane',starLight:'dim',brightness:.45,glow:9,color:'#b8d1df',background:'#05090e',stars:120,fontSize:14,labels:'all',orthographic:false,autoRotate:false,rotationSpeed:.002});
 function session(name='未命名星系',themes=['灵感']){const id=uid();return{id,name,themes,favorite:false,archived:false,deleted:false,createdAt:new Date().toISOString(),nodes:[{id:uid(),kind:'theme',body:['blackhole','neutron','star'][Math.floor(Math.random()*3)],title:themes.join(' · '),text:'本次思维风暴的主题星核',p:[0,0,0],color:'#dbbe86',size:8,format:'plain'}],edges:[],assets:[],reviews:[],camera:{yaw:-.35,pitch:.2,zoom:1,panX:0,panY:0},layout:defaults(),appearance:appearance(),views:[],online:false,query:'',autoReview:true,disabledPersonas:[]};}
 function migrate(state){const out=clone(state);if(out.schema===1){out.schema=2;for(const s of out.sessions){s.edges=s.edges||s.nodes.filter(n=>n.parent!==null&&n.parent!==undefined).map(n=>({id:uid(),from:String(n.parent),to:String(n.id),relation:'延伸',color:'#486077',width:1,curve:0,dashed:false}));s.nodes=s.nodes.map(n=>({...n,id:String(n.id),kind:n.kind||'idea',format:'plain'}));s.assets=s.assets||[];s.reviews=s.reviews||[];s.appearance={...appearance(),brightness:s.brightness??.45,color:s.color||'#b8d1df'};s.layout={...defaults(),...s.layout};s.camera=s.camera||{yaw:-.35,pitch:.2,zoom:1,panX:0,panY:0};s.views=[];s.autoReview=true;s.disabledPersonas=[];}}return out;}
 function valid(state){
@@ -144,7 +177,8 @@ function valid(state){
  if(!state||state.schema!==2||!Array.isArray(state.sessions)||state.sessions.length>LIMITS.sessions)fail('星图文件格式无效');
  function checkAppearance(a){
   if(!a)return;
-  if(a.fadeIdeas!=null&&typeof a.fadeIdeas!=='boolean'||a.fadeDelay!=null&&!num(a.fadeDelay,5,86400)||a.fadeOpacity!=null&&!num(a.fadeOpacity,.4,.5))fail('联想淡化设置无效');
+  if(a.fadeIdeas!=null&&typeof a.fadeIdeas!=='boolean'||a.fadeDelay!=null&&!num(a.fadeDelay,5,86400)||a.fadeOpacity!=null&&!num(a.fadeOpacity,.4,.6))fail('联想淡化设置无效');
+  if(a.starDistribution!=null&&!['none','plane','volume'].includes(a.starDistribution))fail('背景星分布无效');
   if(a.starLight!=null&&!['dim','bright','pulse'].includes(a.starLight))fail('背景星光模式无效');
   for(const [key,min,max] of [['brightness',0,1],['glow',0,30],['stars',0,400],['fontSize',10,24],['rotationSpeed',.0005,.01]])if(a[key]!=null&&!num(a[key],min,max))fail('外观设置超出范围');
  }
@@ -161,17 +195,26 @@ function valid(state){
   checkAppearance(s.appearance);camera(s.camera);
   if(s.drift!=null){const d=s.drift;if(typeof d.enabled!=='boolean'||!num(d.interval,5,86400)||!num(d.lifetime,5,86400))fail('彗星计时设置无效');}
   for(const n of s.nodes){
+   if(n.associationFormat!=null&&!['mixed','keywords','sentences'].includes(n.associationFormat))fail('联想形式无效');
    if(n.display!=null&&!['star','text'].includes(n.display)||n.fontFamily!=null&&!Object.hasOwn(textFonts,n.fontFamily))fail('想法显示样式无效');
    if(n.finish!=null&&!Object.values(finishes).some(group=>Object.hasOwn(group,n.finish)))fail('星体外观无效');
    if(n.fx!=null&&typeof n.fx!=='boolean'||n.fxPower!=null&&!num(n.fxPower,0,1)||n.fxSpeed!=null&&!num(n.fxSpeed,.1,3))fail('星体特效设置无效');
    if(n.confirmed!=null&&typeof n.confirmed!=='boolean'||n.generated!=null&&typeof n.generated!=='boolean'||n.viewedAt!=null&&!num(n.viewedAt,0,8640000000000000))fail('想法识别状态无效');
    if(n.arrivedAt!=null&&!num(n.arrivedAt,0,8640000000000000))fail('彗星到访时间无效');
    if(n.motion!=null){if(typeof n.motion!=='object'||Array.isArray(n.motion))fail('星体运动设置无效');const m=motionOf(n);
+    if(m.centerNodeId!==undefined){
+     if(!str(m.centerNodeId,100))fail('公转中心想法无效');
+     const seen=new Set([n.id]);let id=m.centerNodeId;
+     while(id){if(seen.has(id))fail('公转中心不可循环引用');seen.add(id);const parent=s.nodes.find(p=>p.id===id);id=parent?.motion?.center?undefined:parent?.motion?.centerNodeId;}
+    }
+    if(m.center!==undefined&&(!Array.isArray(m.center)||m.center.length!==3||!m.center.every(v=>num(v,-100000,100000))))fail('公转中心坐标无效');
     if(!['circle','ellipse','none'].includes(m.orbit)||![m.spin,m.spinReverse,m.reverse,m.trail].every(v=>typeof v==='boolean')||
      !num(m.spinPeriod,1,600)||!num(m.period,2,1200)||!num(m.radius,.1,4)||!num(m.ratio,.05,1)||!num(m.tilt,-90,90))fail('星体运动设置无效');
    }
   }
+  if(!Number.isInteger(s.associationMin??5)||!Number.isInteger(s.associationMax??8)||(s.associationMin??5)<1||(s.associationMax??8)>20||(s.associationMin??5)>(s.associationMax??8))fail('联想数量范围无效');
   if(s.disabledPersonas!=null&&(!Array.isArray(s.disabledPersonas)||s.disabledPersonas.some(x=>!str(x,200))))fail('人格选择无效');
+  if(s.clickAssociations!=null&&typeof s.clickAssociations!=='boolean')fail('点击星点联想设置无效');
   if(s.autoReview!=null&&typeof s.autoReview!=='boolean'||s.online!=null&&typeof s.online!=='boolean'||s.query!=null&&!str(s.query,400))fail('模型或联网设置无效');
   for(const n of s.nodes)if(n.reason!=null&&!str(n.reason,2000)||n.group!=null&&!str(n.group,200))fail('想法说明无效');
   if(s.views&&(!Array.isArray(s.views)||s.views.length>20))fail('视角书签无效');for(const v of s.views||[]){if(!str(v.name,50))fail('视角名称无效');camera(v.camera);}
@@ -198,4 +241,4 @@ function project(p,c,w,h,ortho=false){const a=Math.cos(c.yaw),b=Math.sin(c.yaw),
 function moveScreen(p,dx,dy,c,scale){const xx=dx/scale,yy=dy/scale,a=Math.cos(c.yaw),b=Math.sin(c.yaw),d=Math.cos(c.pitch),f=Math.sin(c.pitch);return[p[0]+a*xx-b*f*yy,p[1]+d*yy,p[2]-b*xx-a*f*yy];}
 function resizeLayout(layout,key,value){const ranges={left:[150,420],right:[220,600],bottom:[120,480]};const[min,max]=ranges[key];return{...layout,[key]:Math.max(min,Math.min(max,value))};}
 function markdown(s){return'# '+s.name+'\n\n主题：'+s.themes.join('、')+'\n\n'+s.nodes.map(n=>'## '+n.title+'\n\n'+n.text+'\n\n'+(n.sources||[]).map(x=>'来源：['+x.title+']('+x.url+')').join('\n')).join('\n\n')+'\n\n## 关系\n\n'+s.edges.map(e=>(s.nodes.find(n=>n.id===e.from)?.title||'')+' — '+e.relation+' → '+(s.nodes.find(n=>n.id===e.to)?.title||'')).join('\n')+'\n\n## 人格反馈\n\n'+s.reviews.map(r=>'### '+r.personaName+' · '+r.createdAt+'\n\n'+(r.error||JSON.stringify(r.content,null,2))).join('\n\n');}
-module.exports={textFonts,cometAnchor,cometDrop,finishes,finishOf,generatedIdea,ideaOpacity,historyRows,restoreRows,driftDefaults,motionOf,orbitalFrame,worldPoint,anchorAfterDrag,expireComets,bodies,bodyOf,seed,LIMITS,clone,uid,defaults,appearance,session,migrate,valid,ideas,textKey,project,moveScreen,resizeLayout,markdown};
+module.exports={backgroundStars,ideaFontSize,textFonts,cometAnchor,cometDrop,finishes,finishOf,generatedIdea,ideaOpacity,historyRows,restoreRows,driftDefaults,motionOf,orbitalFrame,worldPoint,anchorAfterDrag,expireComets,bodies,bodyOf,seed,LIMITS,clone,uid,defaults,appearance,session,migrate,valid,ideas,textKey,project,moveScreen,resizeLayout,markdown};
