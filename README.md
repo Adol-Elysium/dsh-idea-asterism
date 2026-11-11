@@ -4,7 +4,7 @@
 
 Idea Asterism is a 3D brainstorming plugin for DeepSeek Harness. Turn notes, images, and documents into a star map. Follow an AI-generated association, start an independent thread, or connect ideas across branches. Each star’s appearance, motion, and connections can be customized.
 
-![潮汐图书馆示例星图。背景星带前，七个想法分布在不同位置。右侧面板显示恒星「给退潮的来信」的正文和样式。](docs/tidal-library-star-map.png)
+![潮汐图书馆示例星图。七个想法以大字标注，背后是疏落的星光。右侧面板显示恒星「给退潮的来信」的正文和样式。](docs/tidal-library-star-map.png)
 
 图中，「潮声借阅卡」延伸到「旧码头的声纹」，另一条分支从「给退潮的来信」通向「灯塔回信」。点选任一星体，就能在右侧读到正文并编辑它。
 
