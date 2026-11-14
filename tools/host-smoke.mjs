@@ -39,6 +39,7 @@ try{
   }
  });
  await page.getByText('星体运动',{exact:true}).click();
+ await page.getByLabel('公转轨道').selectOption('ellipse');
  if(await page.getByLabel('公转轨道').inputValue()!=='ellipse')throw Error('Missing comet orbit');
  await page.getByLabel('公转周期（秒）').fill('48');await page.getByLabel('公转周期（秒）').press('Enter');
  await page.getByRole('button',{name:'发散',exact:true}).click();

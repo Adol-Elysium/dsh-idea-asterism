@@ -25,3 +25,5 @@ npm pack --offline --ignore-scripts
 - `node tools/host-smoke.mjs` 使用同一浏览器配置和 `DSH_INSTALL` 指定的 Windows 桌面宿主。先在 `tools/.test-profile` 下初始化并安装插件到含桌面 Web 界面的隔离配置 `star-sea-check`，再运行脚本，验证侧栏入口、编辑和保存。
 
 发布时同步更新 `package.json`、README 的安装示例和 CHANGELOG，重新构建并验证打出的安装包。
+
+已在 DSH `0.2.2-rc.3` 完成隔离宿主验证。兼容版本采用逐版复核后的明确列表，升级后继续运行宿主检查和实机测试。

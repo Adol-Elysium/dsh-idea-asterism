@@ -28,7 +28,7 @@ $package = 'C:\Downloads\dsh-idea-asterism-1.0.3.tgz'
 & (Join-Path $dshDir 'resources\runtime\cli\bin\dsh.cmd') plugin --profile desktop add $package --offline --ignore-scripts
 ```
 
-重启 DSH，从左侧栏打开「思维星图」。桌面集成已在 Windows、DSH `0.2.2-rc.1` 上验证。`0.2.1-rc.5` 仅验证过侧栏接入。从旧包 `dsh-star-sea` 切换时，先点「备份全部」，在 DSH 插件管理中移除旧包，再安装 `dsh-idea-asterism`。新版读取相同的数据目录，两个包同时启用会出现重复入口。
+重启 DSH，从左侧栏打开「思维星图」。桌面集成已在 Windows、DSH `0.2.2-rc.1` 和 `0.2.2-rc.3` 上验证。`0.2.1-rc.5` 仅验证过侧栏接入。从旧包 `dsh-star-sea` 切换时，先点「备份全部」，在 DSH 插件管理中移除旧包，再安装 `dsh-idea-asterism`。新版读取相同的数据目录，两个包同时启用会出现重复入口。
 
 联想数量可在输入区设置「最少条数」和「最多条数」，均为 1–20 的整数，默认 5–8 条。生成的联想默认围绕来源想法公转，并跟随来源一起移动；用户新建的普通想法默认围绕主题公转。每颗星仍可单独调整运动或公转中心。
 
