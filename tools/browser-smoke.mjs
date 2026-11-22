@@ -26,7 +26,7 @@ const svc={
     }
     const ideas=['潮汐书架','借阅年轮','漂流索引','声音地图','夜航书签','记忆观测站'].map(title=>({title,text:title+'的创意设想',sourceIds:[1]}));
     yield {type:'text-delta',text:JSON.stringify(review?{questions:['谁在夜间借阅？','声音如何保存？'],intentions:['可能希望保存记忆'],appreciation:'可做一周声音采集实验。'}:drift?[{title:'迁徙信箱'+calls.filter(c=>c==='drift').length,text:'把邮件交给迁徙路线。',reason:'以季节约定送达时间。'}]:ideas)};yield {type:'finish',reason:{kind:'stop'}};
-  }},web:{search:async({query})=>{assert.equal(query,'城市记忆');calls.push('search');return {sources:[{title:'测试资料',url:'https://example.org/article',snippet:'摘要'}]};},fetch:async()=>({url:'https://example.org/article',statusCode:200,body:{kind:'text',content:'样本文字'}})}
+  }},web:{search:async({query,llmProvider})=>{assert.equal(query,'城市记忆');assert.equal(llmProvider,'fixture');calls.push('search');return {sources:[{title:'测试资料',url:'https://example.org/article',snippet:'摘要'}]};},fetch:async()=>({url:'https://example.org/article',statusCode:200,body:{kind:'text',content:'样本文字'}})}
 };
 let handler;
 const scope={get:n=>svc[n],effect:fn=>fn(),webServer:{register:r=>{handler=r.handler;return ()=>{};}}};

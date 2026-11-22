@@ -15,17 +15,25 @@ export async function personas(ctx,includePrompts=false){
 }
 export function parseIdeas(text){const arr=core.ideas(text);if(arr.length<5)throw new PublicError('有效联想不足 5 条');return arr.slice(0,10);}
 export async function completion(ctx,{system,text,images=[],maxTokens=3500},signal){
- const selection=ctx.get('agentDefaultModel')?.currentSelection?.();const llm=ctx.get('llm');if(!selection?.provider||!selection?.model||!llm)throw new PublicError('请先在 DSH 配置可用的默认模型');
+ const selection=ctx.get('agentDefaultModel')?.currentSelection?.();const llm=ctx.get('llm');
+ if(typeof llm?.stream!=='function')throw new PublicError('当前 DSH 的模型服务不可用');
+ if(!selection?.provider||!selection?.model)throw new PublicError('请先在 DSH 配置可用的默认模型');
  const content=[{type:'text',text}];
- if(images.length){const info=await llm.resolveModelInfo(selection.provider,selection.model,signal);if(!info.inputModalities?.includes('image'))throw new PublicError('当前模型未声明支持图片，请切换视觉模型或输入图片描述');const attachments=ctx.get('attachments');if(!attachments)throw new PublicError('图片服务未启用');for(const img of images){const match=/^data:(image\/(?:png|jpeg|webp));base64,([A-Za-z0-9+/=]+)$/.exec(img);if(!match||match[2].length>4_000_000)throw new PublicError('图片格式或大小不符合要求');const data=Buffer.from(match[2],'base64');if(data.toString('base64')!==match[2])throw new PublicError('图片编码无效');const ref=await attachments.saveImage({data:new Uint8Array(data),mediaType:match[1],name:'idea-asterism-image'});content.push({type:'image',attachment:ref});}}
+ if(images.length){
+  if(typeof llm.resolveModelInfo!=='function')throw new PublicError('当前 DSH 无法查询模型的图片支持');
+  const info=await llm.resolveModelInfo(selection.provider,selection.model,signal);if(!info?.inputModalities?.includes('image'))throw new PublicError('当前模型未声明支持图片，请切换视觉模型或输入图片描述');const attachments=ctx.get('attachments');if(typeof attachments?.saveImage!=='function')throw new PublicError('当前 DSH 的图片服务不可用');for(const img of images){const match=/^data:(image\/(?:png|jpeg|webp));base64,([A-Za-z0-9+/=]+)$/.exec(img);if(!match||match[2].length>4_000_000)throw new PublicError('图片格式或大小不符合要求');const data=Buffer.from(match[2],'base64');if(data.toString('base64')!==match[2])throw new PublicError('图片编码无效');const ref=await attachments.saveImage({data:new Uint8Array(data),mediaType:match[1],name:'idea-asterism-image'});content.push({type:'image',attachment:ref});}}
  let answer='',finished=false;try{for await(const chunk of llm.stream({...selection,system,messages:[{role:'user',content}],maxTokens,signal})){if(chunk.type==='text-delta'){answer+=chunk.text||'';if(answer.length>60000)throw new PublicError('模型输出超过长度限制');}if(chunk.type==='finish'){if(['error','aborted'].includes(chunk.reason?.kind))throw new PublicError('模型请求失败或已取消，请检查 DSH 模型设置');finished=true;}}}catch(e){if(e instanceof PublicError)throw e;if(signal?.aborted)throw new PublicError('请求已取消或超时');throw new PublicError('模型调用失败，请检查 DSH 的模型配置、额度或网络');}
  if(!finished||!answer.trim())throw new PublicError('模型未完整返回内容');return{answer,model:selection.model};
 }
 function safeURL(value){try{const u=new URL(value);if(!['http:','https:'].includes(u.protocol)||u.username||u.password)return null;const host=u.hostname.toLowerCase();if(host==='localhost'||host.endsWith('.local')||host.includes(':')||/^(127\.|10\.|192\.168\.|169\.254\.|0\.|172\.(1[6-9]|2\d|3[01])\.)/.test(host))return null;return u.href;}catch{return null;}}
 function stripHTML(text){return String(text).replace(/<(script|style|noscript)\b[^>]*>[\s\S]*?<\/\1>/gi,' ').replace(/<[^>]*>/g,' ').replace(/\s+/g,' ').slice(0,12000);}
 export async function research(ctx,query,signal){
- if(typeof query!=='string'||!query.trim()||query.length>400)throw new PublicError('请先填写并确认 1—400 字的联网查询词');const web=ctx.get('web');if(!web)throw new PublicError('DSH 尚未启用联网搜索');
- let result;try{result=await web.search({query:query.trim(),maxResults:5},signal);}catch{throw new PublicError('联网搜索失败；未转为离线生成，请检查搜索服务或关闭联网重试');}
+ if(typeof query!=='string'||!query.trim()||query.length>400)throw new PublicError('请先填写并确认 1—400 字的联网查询词');const web=ctx.get('web');
+ if(typeof web?.search!=='function')throw new PublicError('当前 DSH 的联网搜索服务不可用');
+ const provider=ctx.get('agentDefaultModel')?.currentSelection?.()?.provider;
+ const request={query:query.trim(),maxResults:5};
+ if(provider)request.llmProvider=provider;
+ let result;try{result=await web.search(request,signal);}catch{throw new PublicError('联网搜索失败；未转为离线生成，请检查搜索服务或关闭联网重试');}
  const sources=(result.sources||[]).filter(s=>safeURL(s.url)).slice(0,5).map((s,i)=>({id:i+1,title:String(s.title||s.url).slice(0,250),url:safeURL(s.url),snippet:String(s.snippet||'').slice(0,2500),retrievedAt:new Date().toISOString(),read:'snippet'}));if(!sources.length)throw new PublicError('检索未返回可引用来源，请调整查询词');
  for(const source of sources.slice(0,2)){try{const page=await web.fetch({url:source.url},signal);if(page.statusCode>=200&&page.statusCode<300&&safeURL(page.url||source.url)){source.url=safeURL(page.url||source.url);source.excerpt=stripHTML(page.body?.content||'');if(source.excerpt)source.read='page';}}catch{/* Keep explicit snippet-only status, never claim the page was read. */}}
  return sources;
